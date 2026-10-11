@@ -1,8 +1,11 @@
+require "json"
+require "shellwords"
+
 class Vne < Formula
   desc "Let your coding agent work on .env files without reading them"
   homepage "https://github.com/pro-vi/vne"
-  url "https://github.com/pro-vi/vne/releases/download/v0.1.0/vne-0.1.0-aarch64-apple-darwin.tar.gz"
-  sha256 "f8df9251602866fa09c93c1542a72b35fac31d4ebc41cc830f4790f282c9fcf3"
+  url "https://github.com/pro-vi/vne/releases/download/v0.1.1/vne-0.1.1-aarch64-apple-darwin.tar.gz"
+  sha256 "7b027ba753572d11d92170bf09d41a4f9d312b7f7038aae7c2f0de908267ddd3"
   license "MIT"
 
   depends_on arch: :arm64
@@ -13,6 +16,15 @@ class Vne < Formula
   end
 
   test do
-    assert_match "vne 0.1.0", shell_output("#{bin}/vne --version")
+    executable = (bin/"vne").to_s.shellescape
+    assert_match "vne 0.1.1", shell_output("#{executable} --version")
+    payload = "release-synthetic-value"
+    (testpath/".env").write("RELEASE_TEST_KEY=#{payload}\n")
+    output = shell_output("#{executable} check .env --json")
+    refute_includes output, payload
+    parsed = JSON.parse(output)
+    refute_includes parsed.inspect, payload
+    entry = parsed.fetch("file").fetch("entries").find { |item| item.fetch("key") == "RELEASE_TEST_KEY" }
+    assert_equal "set", entry.fetch("valueState")
   end
 end
